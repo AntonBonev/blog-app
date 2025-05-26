@@ -1,34 +1,43 @@
-node {
-    def app
+pipeline {
+  agent {
+    kubernetes {
+      label 'kaniko-agent'
+      defaultContainer 'kaniko'
+    }
+  }
 
+  environment {
+    IMAGE_NAME = "antonbonev/blog"
+    IMAGE_TAG = "${BUILD_NUMBER}"
+    DOCKER_REGISTRY = "docker.io"
+  }
+
+  stages {
     stage('Clone repository') {
-      
-
+      steps {
         checkout scm
+      }
     }
 
-    stage('Build image') {
-  
-       app = docker.build("antonbonev/blog")
+    stage('Build and Push with Kaniko') {
+      steps {
+        sh '''
+          /kaniko/executor \
+            --context `pwd` \
+            --dockerfile `pwd`/Dockerfile \
+            --destination=$DOCKER_REGISTRY/$IMAGE_NAME:$IMAGE_TAG \
+            --cleanup
+        '''
+      }
     }
 
-    stage('Test image') {
-  
-
-        app.inside {
-            sh 'echo "Tests passed"'
-        }
+    stage('Trigger Manifest Update') {
+      steps {
+        echo "Triggering updateManifest job with tag $IMAGE_TAG"
+        build job: 'updatemanifest', parameters: [
+          string(name: 'DOCKERTAG', value: IMAGE_TAG)
+        ]
+      }
     }
-
-    stage('Push image') {
-        
-        docker.withRegistry('https://registry.hub.docker.com', 'dockerhub') {
-            app.push("${env.BUILD_NUMBER}")
-        }
-    }
-    
-    stage('Trigger ManifestUpdate') {
-                echo "triggering updatemanifestjob"
-                build job: 'updatemanifest', parameters: [string(name: 'DOCKERTAG', value: env.BUILD_NUMBER)]
-        }
+  }
 }
