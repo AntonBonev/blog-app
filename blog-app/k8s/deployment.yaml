@@ -17,6 +17,6 @@ spec:
       containers:
         - name: blog-app
           # image: registry.registry.svc.cluster.local:5000/blog-app:latest
-          image: 10.106.5.196:5000/blog-app:4fcf9d101cf722598bafc0d28dbb75c809121b30
+          image: 10.106.5.196:5000/blog-app:3753a6fda06ef40799bd7cb0ec0d5707f5aa6f34
           ports:
             - containerPort: 5000
